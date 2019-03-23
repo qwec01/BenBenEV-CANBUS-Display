@@ -246,7 +246,7 @@ void CELS(byte l, byte h, unsigned int x, byte color)
   Serial.print(",1);");
   dispatch();
 }
-//--------------------------------------亮度滤波程序
+//--------------------------------------亮度滤波程序，使用5537光敏电阻与1K电阻分压
 byte brightFilter()
 {
   byte x;

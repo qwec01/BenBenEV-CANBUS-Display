@@ -28,7 +28,7 @@
 //flag bit:     7         6         5         4         3     2     1     0
 //         HVACstat  dcdcCurrent  rstkmall  TrckFrce    Ri
 
-char MaxBatProbTemp, MinBatProbTemp;
+char MaxBatProbTemp, MinBatProbTemp, ok[2]={'O','K'};
 float energy;
 int power, powert = -1, spd = 0, spdt, consume, consumet, Current;
 unsigned int SOC, SOCt, SOC100, SOC_BMS, SOCt_BMS, SOC100_BMS, consumeavg, Efficiency, count185t;
@@ -128,6 +128,7 @@ void setup() {
   while (Serial.read() >= 0); //清空串口缓存
   SPG_TPN(1, 2);
 #if !debug
+//  while (!Serial.find(ok));   //If it works?
   while (!Serial.find("OK"));
 #else
   delay(500);
