@@ -8,5 +8,7 @@ Libraries/TM1638为自编库，请下载后复制到Arduino IDE的库文件夹
 链接：https://github.com/pierremolinaro/acan2515  
 下载该库后复制到Arduino IDE的库文件夹，也可从IDE中下载库
 显示屏使用X宝购得的USART串口屏  
+显示屏工程文件使用了字体 Digital Counter 7  
+下载地址https://en.m.fontke.com/family/431683/  
 CAN控制器为MCP2515，CAN收发器为TJA1050，数字隔离芯片ADUM1201  
 本程序仍不稳定  
