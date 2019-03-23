@@ -41,7 +41,7 @@ void printUSART()
   //-----------------------------------------------------------------------//
   //-------------------------------↓计算↓----------------------------------//
   //-----------------------------------------------------------------------//
-  power = (Voltage / 10.0) * ( Current / 10.0) / 100.0; //10倍
+  power = (Voltage / 10.0) * ( Current / 10.0) / 100.0; //10倍,kW
   if (abs(Current) < 5) //算内阻
     Voltagei = Voltage;
   if (abs(Current) >= 500 && Voltagei != 0)
@@ -70,7 +70,7 @@ void printUSART()
   }
   else
   {
-    kmall = 180;
+    kmall = KM;
   }
   if (used_SOC_BMS != 0)
   {
@@ -79,26 +79,35 @@ void printUSART()
   }
   else
   {
-    BMSkmall = 180;
+    BMSkmall = KM;
   }
   kmremaining = kmall * (SOC / 1000.0);
   BMSkmremaining = BMSkmall * (SOC_BMS / 1000.0);
 
 
-  if (spd >= 50 &&  TractionForce > 0)
-    Efficiency = (TractionForce * (spd / 3.6) / power) * 10.0;
-  else
-    Efficiency = 0;
+
   //电压条算法：(BOX的y2-1)-((电压-最小电压)/(最大电压-最小电压))*(条高度-2)
   TractionForce = MotorTorque * 2.683732; //牵引力 = 转矩 / 10 * 齿轮比 / 车轮半径
   //170Nm时，轮上转矩1348.17，牵引力4562.34，轮径591mm
   Voltagebox = 312 - ((Voltage - 2800) / 900.0) * 201;
   powerbox = 312 - (abs(power) / 700.0) * 201;
   TractionForceBox = 312 - (abs(TractionForce) / 4600.0) * 201;
-  if (motorspd > -3000) 
+  if (motorspd > -3000)
     spd = abs(motorspd) / 7.3170;//←换胎的话修改这个数值
   ODO = (odo[0] * 65536 + (unsigned long)odo[1] * 256 + odo[2]);
-
+  if (charging != 1)
+  {
+    if (spd >= 50 &&  TractionForce > 0)
+      Efficiency = (TractionForce * (spd / 3.6) / power) * 10.0;
+    else
+      Efficiency = 0;
+  }
+  else
+  {
+    ChgPin = ChgVin * ChgIin/10.0; ///瓦特
+    Efficiency = ((Voltage/10.0)*abs(Current/10.0)) / ChgPin * 1000.0;
+    if (Efficiency>=999)  Efficiency=999;
+  }
 
   if (ODO != ODObegin)  //算平均电耗
   {
@@ -306,7 +315,7 @@ void printUSART()
     if (ODO != ODOt)  //上电后平均能耗
     {
       dtostrf(consumeavg / 100.0, 2, 2, str);
-      LABL(24, 308, 121, 368, str, 15, 1);
+      LABL(32, 293, 131, 370,  str, 15, 1);
       Serial.print("DS32(350,0,'"); dispatch();
       Serial.print(ODO / 10); Serial.print('.'); dispatch();
       Serial.print(ODO % 10); Serial.print("',15,0);"); dispatch();
@@ -314,7 +323,7 @@ void printUSART()
       ex += 2;                                 //ex max = 19;
     }
     dtostrf(energy / 1000.0, 2, 2, str);
-    LABL(24, 308, 97, 368, str, 15, 1);
+    LABL(32, 293, 98, 370, str, 15, 1);
 
     ex ++;
 
@@ -328,18 +337,18 @@ void printUSART()
       ex++;                                   //ex max = 20
     }
     execute();
-    dtostrf(Efficiency / 100.0, 2, 2, str);
-    if (Efficiency  < 1000)
-    {
-      str[4] = '%';
-      str[5] = '\0';
-    }
-    else
-    {
-      str[5] = '%';
-      str[6] = '\0';
-    }
-    LABL(24, 215, 17, 296, str, 15, 2);
+    dtostrf(Efficiency / 100.0, 2, 1, str);
+    //    if (Efficiency  < 1000)
+    //    {
+    //      str[4] = '%';
+    //      str[5] = '\0';
+    //    }
+    //    else
+    //    {
+    //      str[5] = '%';
+    //      str[6] = '\0';
+    //    }
+    LABL(32, 219, 5, 277, str, 15, 2);
     ex++;
 
     for (j = 3; j <= 7; j++)
@@ -399,6 +408,18 @@ void printUSART()
       minutet = minute;
       ex += 2;
     }
+    //市电电压
+    dtostrf(ChgVin, 3, 0, str);
+    LABL(24, 345, 40, 390, str, 15, 2);
+    //市电电流
+    dtostrf(ChgIin / 10.0, 2, 1, str);
+    LABL(24, 410, 40, 460, str, 15, 2);
+    //市电功率
+    dtostrf(ChgPin, 4, 0, str);
+    LABL(24, 335, 65, 390, str, 15, 2);
+    //充电效率
+    dtostrf(Efficiency / 10.0, 2, 1, str);
+    LABL(32, 219, 5, 277, str, 15, 2);
     execute();
     //电池温度
     Serial.print(F("DS16(26,179,'")); //字符串保存到PROGMEM
@@ -430,7 +451,7 @@ void printUSART()
     }
   }
 
-#if 1 
+#if 1
   if (spg == 5) //------------------------------------BMS页面----------占用634字节
   {
     //CELS(m,h,l,'显示内容',c,bc,ali);用m点阵字体在h行l列的单元格中,用c号颜色字,bc号颜色背景,显示相应内容
@@ -450,9 +471,9 @@ void printUSART()
       for (l = 0; l <= 9; l++)
       {
         if (j == 86) break;
-        CELS(l,h,BVoltage[j],0);
-//        Serial.print("CELS(24,"); Serial.print(l); comma(','); Serial.print(h); Serial.print(",'");
-//        Serial.print(BVoltage[j]); Serial.print("',15,0,1);"); 
+        CELS(l, h, BVoltage[j], 0);
+        //        Serial.print("CELS(24,"); Serial.print(l); comma(','); Serial.print(h); Serial.print(",'");
+        //        Serial.print(BVoltage[j]); Serial.print("',15,0,1);");
         j++;
         if (j == 25 || j == 50 || j == 75)
         {
@@ -467,28 +488,28 @@ void printUSART()
       }
     }
     Serial.println(); delay(75);
-//    byte maxpos = 0, minpos = 0;
-//    for (j = 0; j <= 85; j++)
-//    {
-//      if (BVoltage[maxpos] < BVoltage[j]) maxpos = j;
-//      if (BVoltage[minpos] > BVoltage[j]) minpos = j;
-//    }
+    //    byte maxpos = 0, minpos = 0;
+    //    for (j = 0; j <= 85; j++)
+    //    {
+    //      if (BVoltage[maxpos] < BVoltage[j]) maxpos = j;
+    //      if (BVoltage[minpos] > BVoltage[j]) minpos = j;
+    //    }
     Serial.print(F("DS24(0,295,'T:  "));
-//    Serial.print("T:  ");
-    j=0;
+    //    Serial.print("T:  ");
+    j = 0;
     for (j = 0; j <= 11; j++)
     {
       Serial.print(BTemp[j], DEC);
       comma(' ');
     }
     Serial.print("     ',15,0);");
-    
-    CELS(MaxVoltNum%10,MaxVoltNum/10,MaxVolt,1);
-    CELS(MinVoltNum%10,MinVoltNum/10,MinVolt,3);
-//    Serial.print("CELS(24,"); Serial.print(maxpos % 10); Serial.print(','); Serial.print(maxpos / 10); Serial.print(",'");
-//    Serial.print(BVoltage[maxpos]); Serial.print("',15,1,1);");
-//    Serial.print("CELS(24,"); Serial.print(minpos % 10); Serial.print(','); Serial.print(minpos / 10); Serial.print(",'");
-//    Serial.print(BVoltage[minpos]); Serial.print("',15,3,1);");
+
+    CELS(MaxVoltNum % 10, MaxVoltNum / 10, MaxVolt, 1);
+    CELS(MinVoltNum % 10, MinVoltNum / 10, MinVolt, 3);
+    //    Serial.print("CELS(24,"); Serial.print(maxpos % 10); Serial.print(','); Serial.print(maxpos / 10); Serial.print(",'");
+    //    Serial.print(BVoltage[maxpos]); Serial.print("',15,1,1);");
+    //    Serial.print("CELS(24,"); Serial.print(minpos % 10); Serial.print(','); Serial.print(minpos / 10); Serial.print(",'");
+    //    Serial.print(BVoltage[minpos]); Serial.print("',15,3,1);");
     Serial.println(); delay(100);
     //ex = 1;
   }

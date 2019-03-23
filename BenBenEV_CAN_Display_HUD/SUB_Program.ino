@@ -2,7 +2,7 @@
 //                                    ↓CAN报文处理子程序↓                                  //
 //----------------------------------------------------------------------------------------//
 static void RCV0 (const CANMessage & inMessage) {   //ID=307和327、615和625
-//  Serial.println(inMessage.id);
+  //  Serial.println(inMessage.id);
   if (inMessage.id == 0x307)  //SOC
   {
     SOC = (inMessage.data[1] << 2) + (inMessage.data[2] >> 6);
@@ -45,7 +45,7 @@ static void RCV0 (const CANMessage & inMessage) {   //ID=307和327、615和625
 static void RCV1 (const CANMessage & inMessage)   //ID=231、675、685
 {
   //8us
-//  Serial.println(inMessage.id);
+  //  Serial.println(inMessage.id);
   if (inMessage.id == 0x231) //DCDC电流
   {
     if (dcdcCurrent != (inMessage.data[3] << 4) + (inMessage.data[4] >> 4))
@@ -55,16 +55,21 @@ static void RCV1 (const CANMessage & inMessage)   //ID=231、675、685
         flag += 0x40;
     }
   }
-  if (inMessage.id >= 0x640 && inMessage.id <= 0x656)
+  if (inMessage.id >= 0x640 && inMessage.id <= 0x656) //所有单体电压
   {
     byte pos;
     pos = (inMessage.id - 0x641);
     memcpy(BVoltagebuf[pos], inMessage.data, 8);
   }
-  if (inMessage.id == 0x675)    //电池温度1-8
+    if (inMessage.id == 0x675)    //电池温度1-8，单体电压界面
+    {
+      for (i = 0; i <= 7; i++)
+        BTemp[i] = inMessage.data[i] - 40;
+    }
+  if (inMessage.id == 0x349)
   {
-    for (i = 0; i <= 7; i++)
-      BTemp[i] = inMessage.data[i] - 40;
+    ChgVin = (inMessage.data[0] << 1) + (inMessage.data[1] >> 7); //市电电压，1倍
+    ChgIin = ((inMessage.data[1]&0x1F) << 3) + (inMessage.data[2] >> 5); //市电电流，10倍
   }
 }
 
@@ -153,6 +158,7 @@ static void RCV4 (const CANMessage & inMessage)   //ID=2B1,185
     count185++;
 
   }
+
 }
 
 static void RCV5 (const CANMessage & inMessage)   //ID=191, 380
@@ -251,7 +257,7 @@ byte brightFilter()
     brightorg += BrightFilterBuf[x];
   }
   brightorg = brightorg / 10;
-  bright = brightorg / 10.0 * 1.462;
+  bright = brightorg / 10.0 * 1.754;
   //  if (brightorg > 420)
   //    bright = -0.0575 * (float)brightorg + 53.997;
   //  if (brightorg <= 420)
@@ -294,6 +300,8 @@ void setZero()
   consumet = 0;
   hour = 0; minute = 0; hourt = 0; minutet = 0;
   spd = 0;
+  MaxBatProbTemp = -40;
+  MinBatProbTemp = -40;
   for (i = 0; i <= 7; i++)
   {
     Temp[i] = 0;

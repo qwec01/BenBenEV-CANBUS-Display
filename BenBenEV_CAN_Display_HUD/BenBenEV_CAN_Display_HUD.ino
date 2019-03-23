@@ -7,6 +7,7 @@
 #include <EEPROM.h>
 #include <SPI.h>
 #include <ACAN2515.h>
+#include <TM1638.h>
 #define SEC_CS 8
 #define PRI_CS 9
 #define SEC_INT 2  //副CAN线，仪表板通信，包含HVAC温度etc
@@ -16,6 +17,13 @@
 #define DIO 4
 #define CLK 6
 #define STB 7
+//-----------------------------------------------------//
+//                     根据车型修改数据                 //
+//-----------------------------------------------------//
+#define KM      180   //满电续航，km， 根据车型修改
+#define ENERGY  23.2  //标称电量，kWh，根据车型修改
+//----------------------------------------------------//
+
 
 //flag bit:     7         6         5         4         3     2     1     0
 //         HVACstat  dcdcCurrent  rstkmall  TrckFrce    Ri
@@ -32,61 +40,30 @@ byte fBatTemp = 0, fBatNum = 0, fspd = 0, flag = 0, dispatched = 0;
 char Temp[8], Tempt[8], BTemp[12];
 unsigned int Voltagebox, powerbox, TractionForceBox, refreshinterval = 333, BVoltage[90], Ri,  MaxVolt, MinVolt;
 unsigned int kmremaining, kmall, BMSkmremaining, BMSkmall;
-unsigned int dcdcCurrent;
+unsigned int dcdcCurrent,ChgVin, ChgIin, ChgPin;
 int motorspd = 0, Voltage, Voltaget, Voltagei, MotorTorque, brightorg;
 byte bright;
 unsigned long runtime, lastruntime, refresh, brightruntime, ODO, ODOt, ODObegin, ODO100, t, count185 = 0, ODObeginForKmallCalc;
 int BrightFilterBuf[11] = {1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024}, TractionForce;
-static uint32_t XTAL = 8UL * 1000UL * 1000UL; //晶振16M
-#if !mirror
-//正常
-//                             0 ,  1....................................,           9 , empty, -
-const byte c1[12] PROGMEM = {0x1f, 0x06, 0x1b, 0x0f, 0x06, 0x0d, 0x1d, 0x07, 0xff, 0x0f, 0x00, 0x00};
-const byte c2[12] PROGMEM = {0x08, 0x00, 0x10, 0x10, 0x18, 0x18, 0x18, 0x00, 0x1f, 0x18, 0x00, 0x10}; //带小数点加0x20
-#else
-//镜像
-//                             0 ,  1....................................,           9 , empty, -
-const byte c1[12] PROGMEM = {0x1f, 0x10, 0x0d, 0x19, 0x12, 0x1b, 0x1f, 0x11, 0xff, 0x1b, 0x00, 0x00};
-const byte c2[12] PROGMEM = {0x08, 0x08, 0x18, 0x18, 0x18, 0x10, 0x10, 0x08, 0x1f, 0x18, 0x00, 0x10}; //带小数点加0x20
-#endif
+static uint32_t XTAL = 16UL * 1000UL * 1000UL; //晶振16M
+
 ACAN2515 PRI (PRI_CS, SPI, PRI_INT);
 ACAN2515 SEC (SEC_CS, SPI, SEC_INT);
-
+TM1638Display HUD(DIO, CLK, STB);     //HUD声明
 
 //------------------------------------------------------------------MCP2515定义
 ACAN2515Mask rxm1 = standard2515Mask (0x7FF , 0, 0);
 ACAN2515Settings settings (XTAL, 500UL * 1000UL);
-
-void RefreshHUD(byte a, byte b, byte c, byte d, byte brightness, bool OnOff, bool dota = 0, bool dotb = 0, bool dotc = 0, bool dotd = 0)
-{
-  SendCommand(0);
-  SendCommand(0x40);
-  SendAddr(0xc0);
-  //------------------------↓这段需要720us
-  SendData(pgm_read_word_near(c1 + a));
-  SendData(pgm_read_word_near(c2 + a) + dota * 0x20);
-  SendData(pgm_read_word_near(c1 + b));
-  SendData(pgm_read_word_near(c2 + b) + dotb * 0x20);
-  SendData(pgm_read_word_near(c1 + c));
-  SendData(pgm_read_word_near(c2 + c) + dotc * 0x20);
-  SendData(pgm_read_word_near(c1 + d));
-  SendData(pgm_read_word_near(c2 + d) + dotd * 0x20);
-  //------------------------↑这段需要720us
-  if (brightness > 7) brightness = 7;
-  SendCommand(0x80 + (OnOff << 3) + brightness);
-}
 
 void setup() {
   Serial.begin(115200);
   while (!Serial);
   Serial.setTimeout(20);
   SPI.begin();
-  pinMode(CLK, OUTPUT);
-  pinMode(DIO, OUTPUT);
-  pinMode(STB, OUTPUT);
+  delay(100);
   //------------------------------------------------↓初始化SEC CAN线-----------------------
   {
-    Serial.println(F("Configuring SEC CANBUS"));
+    //    Serial.println(F("Configuring SEC CANBUS"));
     settings.mRequestedMode = ACAN2515Settings::NormalMode;
     settings.mReceiveBufferSize = 8;
     settings.mTransmitBuffer0Size = 0;
@@ -102,7 +79,7 @@ void setup() {
     unsigned int errorCode = SEC.begin (settings, [] { SEC.isr (); }, rxm0, rxm1, filters, 6); //isr中断服务程序在源码的ACAN2515.cpp里
 #if debug
     if (errorCode == 0)
-      Serial.println(F("SEC Succ"));
+      Serial.println(F("SEC CAN Success"));
     else
     {
       Serial.print(F("SEC Init Fail, ErrCode=0x"));
@@ -114,7 +91,7 @@ void setup() {
 
   //------------------------------------------------↓初始化PRI CAN线
   {
-    Serial.println(F("Configuring PRI CANBUS"));
+    //    Serial.println(F("Configuring PRI CANBUS"));
     settings.mReceiveBufferSize = 26;
     settings.mTransmitBuffer0Size = 0;
     ACAN2515Mask rxm0 = standard2515Mask (0x7CF , 0, 0);
@@ -130,7 +107,7 @@ void setup() {
     unsigned int errorCode = PRI.begin (settings, [] { PRI.isr (); }, rxm0, rxm1, filters, 6); //664us, isr中断服务程序在源码的ACAN2515.cpp里
 #if debug
     if (errorCode == 0)
-      Serial.println(F("PRI Succ"));
+      Serial.println(F("PRI CAN Success"));
     else
     {
       Serial.print(F("PRI Init Fail, ErrCode=0x"));
@@ -148,22 +125,35 @@ void setup() {
   EEPROM.get(28, used_SOC);
   EEPROM.get(30, used_SOC_BMS);
   delay(50);
-  while (Serial.read() >= 0);
+  while (Serial.read() >= 0); //清空串口缓存
   SPG_TPN(1, 2);
 #if !debug
   while (!Serial.find("OK"));
 #else
-  delay(300);
+  delay(500);
 #endif
   //--------------------------------------------显示EEPROM值
   Serial.print(F("DS24(0,180,'Used SOC_BMS: ")); Serial.print(used_SOC_BMS); Serial.print("',15,0);");
   Serial.print(F("DS24(0,210,'Used SOC:     ")); Serial.print(used_SOC); Serial.print("',15,0);");
   Serial.print(F("DS24(0,240,'energy:       ")); Serial.print(energy); Serial.println("',15,0);");
-  for (byte i = 0; i <= 1; i++)
+  HUD.rst();//上电初始化
+  for (byte i = 0; i <= 1; i++)//全显测试
   {
-    RefreshHUD(8, 8, 8, 8, 7, 1, 1, 1, 1);
+    HUD.SendCommand(0x40);//数据命令设置，写数据到显存，地址自动增加
+    HUD.SendAddr(0xC0);//第一个显存地址
+    for (byte j = 0; j <= 15; j++)
+    {
+      HUD.SendData(0xFF);
+    }
+    HUD.SendCommand(0x8F);
     delay(500);
-    RefreshHUD(0, 0, 0, 0, 0, 0);
+    HUD.SendCommand(0x40);//数据命令设置，写数据到显存，地址自动增加
+    HUD.SendAddr(0xC0);//第一个显存地址
+    for (byte j = 0; j <= 15; j++)
+    {
+      HUD.SendData(0);
+    }
+    HUD.SendCommand(0x8F);
     delay(500);
   }
   delay(1000);
@@ -194,18 +184,23 @@ void loop()
     bright = brightFilter();
     if (motorspd > -3000)
       spd = abs(motorspd) / 7.3170; //←换胎的话修改这个数值
-    if (spd < 1000)
-#if !mirror
-      RefreshHUD(10, spd / 100, (spd % 100) / 10, spd % 10, bright / 14.28, 1, 0, 0, 1, 0);
-#else
-      RefreshHUD(spd % 10, (spd % 100) / 10, spd / 100, 10, bright / 14.28, 1, 1, 0, 0, 0);
-#endif
-    if (spd >= 1000)
-#if !mirror
-      RefreshHUD(spd / 1000, (spd % 1000) / 100, (spd % 100) / 10, spd % 10, bright / 14.28, 1, 0, 0, 1, 0);
-#else
-      RefreshHUD(spd % 10, (spd % 100) / 10, (spd % 1000) / 100, spd / 1000,  bright / 14.28, 1, 1, 0, 0, 0);
-#endif
+    //------------------------------------------------------------------//
+    //                            根据个人喜好修改                       //
+    //------------------------------------------------------------------//
+    /*  HUD可以以镜像方式显示2个4位数，范围为-1999~9999，可以选择小数位数，推荐为1位
+         HUD投影在风档上时，右侧为第一个数
+         下面3行程序的第一行 byte dot[2] = {1, 1}; 大括号内分别为HUD上两个数值的小数位数，左边是第一个数的
+         第二行 float aa[2] = {spd / 10.0, Current / 10.0}; 大括号内分别个HUD显示的数值，
+         注意本程序中有部分数值是以10倍存储的，显示正常值必须除以10.0。（“.0绝对不能省略”）
+         如果不想显示第2个数，设置第2个数为-2000，且小数位数为0
+         任何数值小于-1999都将不显示，或显示错误（忽略小数点）
+         第三行 HUD.Refresh(aa, dot, bright/14.2, 1); 
+         小括号内前2个变量不要修改，第三个变量是亮度，第四个是显示开/关
+    */
+    byte dot[2] = {1, 1}; //小数位数
+    float aa[2] = {spd / 10.0, Current/10.0}; //要显示的数
+    HUD.Refresh(aa, dot, bright / 14.2, 1);
+    //------------------------------------------------------------------//
     brightruntime = runtime;
   }
   if (Serial.available() > 0)//---------------------------------按钮
@@ -215,14 +210,14 @@ void loop()
       bn = Serial.parseInt();
       if (bn != 0)
       {
-                if (bn < 10 && bn != 4 && bn != 6)
-                {
-                  spg = bn;
-                  changeFilt();
-                  //printUSART();
-                  lastruntime = millis();
-                  runtime = lastruntime;
-                }
+        if (bn < 10 && bn != 4 && bn != 6)
+        {
+          spg = bn;
+          changeFilt();
+          //printUSART();
+          lastruntime = millis();
+          runtime = lastruntime;
+        }
         if (bn == 4)  //能耗清零
         {
           ODObegin = ODO;
@@ -241,10 +236,10 @@ void loop()
           EEPROM.put(12, ODO);  //4 bytes
           EEPROM.put(16, SOC);
           EEPROM.put(18, SOC_BMS);
-          kmall = 180;
-          kmremaining = 180 * (SOC / 100.0);
-          BMSkmall = 180;
-          BMSkmremaining = 180 * (SOC_BMS / 100.0);
+          kmall = KM;
+          kmremaining = KM * (SOC / 100.0);
+          BMSkmall = KM;
+          BMSkmremaining = KM * (SOC_BMS / 100.0);
           EEPROM.put(24, ODObeginForKmallCalc);
           EEPROM.put(28, used_SOC);
           EEPROM.put(30, used_SOC_BMS);
