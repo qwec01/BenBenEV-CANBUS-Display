@@ -1,7 +1,7 @@
 #include "Arduino.h"
 #include "TM1638.h"
 #include <avr/pgmspace.h>
-#define mirror 1
+#define mirror 0
 #if !mirror
 //正常
 //                                            0 ,  1...........3............5..........7,           9 , empty, -
@@ -48,6 +48,7 @@ void TM1638Display::rst()
   {
     SendData(0);
   }
+  SendCommand(0x8F);
 }
 void TM1638Display::SendNum(byte a)
 {
@@ -62,11 +63,20 @@ void TM1638Display::Refresh(float InputNum[2], byte dot[2], byte brightness, boo
   byte digit;
   for (byte i = 0; i <= 1; i++)
   {
-    unsigned int Num = abs(InputNum[i]) * pow(10, dot[i]);
+    unsigned long Num = abs(InputNum[i]) * pow(10, dot[i]);
     if (Num >= 2000 && InputNum[i] < 0) break; //第2个数没有，过
-
+	//
+	if (Num > 9999)
+	{
+		for (byte j=0;j<=3;j++)
+		{			
+			SendData(0x40);
+			SendData(0x00);
+		}
+		continue;		
+	}
 #if !mirror //-----------------------------------------------------------正常
-    if (Num >= 1000)
+    if (dot[i]>=2 || Num >= 1000)
     {
       digit = pgm_read_word_near(c1 + Num / 1000);
       if (dot[i] == 3)
@@ -83,7 +93,7 @@ void TM1638Display::Refresh(float InputNum[2], byte dot[2], byte brightness, boo
     }
     else
       SendNum(10);
-    if (Num >= 100)
+    if (dot[i]>=1 || Num >= 100)
     {
       digit = pgm_read_word_near(c1 + (Num / 100) % 10);
       if (dot[i] == 2)
@@ -93,7 +103,7 @@ void TM1638Display::Refresh(float InputNum[2], byte dot[2], byte brightness, boo
     }
     else
       SendNum(10);
-    if (Num >= 10)
+    if (dot[i]>=0 || Num >= 10)
     {
       digit = pgm_read_word_near(c1 + (Num / 10) % 10);
       if (dot[i] == 1)
@@ -135,7 +145,7 @@ void TM1638Display::Refresh(float InputNum[2], byte dot[2], byte brightness, boo
     }
     else
       SendNum(10);
-    if (dot[i]>=1) //次高位
+    if (dot[i]>=1 || Num>=100) //次高位
     {
       digit = pgm_read_word_near(c1 + (Num / 100) % 10);
       if (dot[i] == 3)
@@ -146,7 +156,7 @@ void TM1638Display::Refresh(float InputNum[2], byte dot[2], byte brightness, boo
     else
       SendNum(10);
 
-    if (Num >= 1000)  //最高位
+    if (dot[i]>=2 || Num >= 1000)  //最高位
     {
       //      byte digit1;
       digit = pgm_read_word_near(c1 + Num / 1000);
