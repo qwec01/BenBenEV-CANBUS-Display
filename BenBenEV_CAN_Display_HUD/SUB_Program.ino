@@ -61,15 +61,15 @@ static void RCV1 (const CANMessage & inMessage)   //ID=231、675、685
     pos = (inMessage.id - 0x641);
     memcpy(BVoltagebuf[pos], inMessage.data, 8);
   }
-    if (inMessage.id == 0x675)    //电池温度1-8，单体电压界面
-    {
-      for (i = 0; i <= 7; i++)
-        BTemp[i] = inMessage.data[i] - 40;
-    }
+  if (inMessage.id == 0x675)    //电池温度1-8，单体电压界面
+  {
+    for (i = 0; i <= 7; i++)
+      BTemp[i] = inMessage.data[i] - 40;
+  }
   if (inMessage.id == 0x349)
   {
     ChgVin = (inMessage.data[0] << 1) + (inMessage.data[1] >> 7); //市电电压，1倍
-    ChgIin = ((inMessage.data[1]&0x1F) << 3) + (inMessage.data[2] >> 5); //市电电流，10倍
+    ChgIin = ((inMessage.data[1] & 0x1F) << 3) + (inMessage.data[2] >> 5); //市电电流，10倍
   }
 }
 
@@ -246,7 +246,7 @@ void CELS(byte l, byte h, unsigned int x, byte color)
   Serial.print(",1);");
   dispatch();
 }
-//--------------------------------------亮度滤波程序，使用5537光敏电阻与1K电阻分压
+//--------------------------------------亮度滤波程序
 byte brightFilter()
 {
   byte x;
@@ -257,13 +257,13 @@ byte brightFilter()
     brightorg += BrightFilterBuf[x];
   }
   brightorg = brightorg / 10;
-  bright = brightorg / 10.0 * 1.754;
-  //  if (brightorg > 420)
-  //    bright = -0.0575 * (float)brightorg + 53.997;
-  //  if (brightorg <= 420)
-  //    bright = -0.2171 * (float)brightorg + 121.8;
+  bright = brightorg / 8.83;
   if (bright < 3) bright = 3;
   if (bright > 100) bright = 100;
+  if (bright >= 35)
+    HUDbright = 7;
+  else
+    HUDbright = bright / 5.0;
   return bright;
 }
 //------------------------刷新串口屏，以防超过屏的处理能力

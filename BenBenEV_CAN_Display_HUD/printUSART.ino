@@ -104,9 +104,9 @@ void printUSART()
   }
   else
   {
-    ChgPin = ChgVin * ChgIin/10.0; ///瓦特
-    Efficiency = ((Voltage/10.0)*abs(Current/10.0)) / ChgPin * 1000.0;
-    if (Efficiency>=999)  Efficiency=999;
+    ChgPin = ChgVin * ChgIin / 10.0; ///瓦特
+    Efficiency = ((Voltage / 10.0) * abs(Current / 10.0)) / ChgPin * 1000.0;
+    if (Efficiency >= 999)  Efficiency = 999;
   }
 
   if (ODO != ODObegin)  //算平均电耗
@@ -130,6 +130,12 @@ void printUSART()
   //---电流----//
   if (spg == 2 || spg == 3)
   {
+    Serial.print(F("DS24(0,0,'AnalogRead:"));
+    Serial.print(brightorg);
+    Serial.print("   ',15);");
+    Serial.print(F("DS24(0,24,'Brightness:"));
+    Serial.print(bright);
+    Serial.print("   ',15);");
     color = 15;
     if (abs(Current) >= 1000)
       dtostrf(abs(Current) / 10.0, 3, 0, str);
@@ -315,7 +321,7 @@ void printUSART()
     if (ODO != ODOt)  //上电后平均能耗
     {
       dtostrf(consumeavg / 100.0, 2, 2, str);
-      LABL(32, 293, 131, 370,  str, 15, 1);
+      LABL(32, 293, 131, 370,  str, 15, 2);
       Serial.print("DS32(350,0,'"); dispatch();
       Serial.print(ODO / 10); Serial.print('.'); dispatch();
       Serial.print(ODO % 10); Serial.print("',15,0);"); dispatch();
@@ -323,7 +329,7 @@ void printUSART()
       ex += 2;                                 //ex max = 19;
     }
     dtostrf(energy / 1000.0, 2, 2, str);
-    LABL(32, 293, 98, 370, str, 15, 1);
+    LABL(32, 293, 98, 370, str, 15, 2);
 
     ex ++;
 

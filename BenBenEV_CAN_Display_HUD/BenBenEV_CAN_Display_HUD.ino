@@ -7,7 +7,7 @@
 #include <EEPROM.h>
 #include <SPI.h>
 #include <ACAN2515.h>
-#include <TM1638.h>
+#include <TM1638Mirror.h>
 #define SEC_CS 8
 #define PRI_CS 9
 #define SEC_INT 2  //副CAN线，仪表板通信，包含HVAC温度etc
@@ -28,7 +28,7 @@
 //flag bit:     7         6         5         4         3     2     1     0
 //         HVACstat  dcdcCurrent  rstkmall  TrckFrce    Ri
 
-char MaxBatProbTemp, MinBatProbTemp, ok[2]={'O','K'};
+char MaxBatProbTemp, MinBatProbTemp;
 float energy;
 int power, powert = -1, spd = 0, spdt, consume, consumet, Current;
 unsigned int SOC, SOCt, SOC100, SOC_BMS, SOCt_BMS, SOC100_BMS, consumeavg, Efficiency, count185t;
@@ -42,7 +42,7 @@ unsigned int Voltagebox, powerbox, TractionForceBox, refreshinterval = 333, BVol
 unsigned int kmremaining, kmall, BMSkmremaining, BMSkmall;
 unsigned int dcdcCurrent,ChgVin, ChgIin, ChgPin;
 int motorspd = 0, Voltage, Voltaget, Voltagei, MotorTorque, brightorg;
-byte bright;
+byte bright, HUDbright;
 unsigned long runtime, lastruntime, refresh, brightruntime, ODO, ODOt, ODObegin, ODO100, t, count185 = 0, ODObeginForKmallCalc;
 int BrightFilterBuf[11] = {1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024}, TractionForce;
 static uint32_t XTAL = 16UL * 1000UL * 1000UL; //晶振16M
@@ -128,7 +128,6 @@ void setup() {
   while (Serial.read() >= 0); //清空串口缓存
   SPG_TPN(1, 2);
 #if !debug
-//  while (!Serial.find(ok));   //If it works?
   while (!Serial.find("OK"));
 #else
   delay(500);
@@ -198,9 +197,9 @@ void loop()
          第三行 HUD.Refresh(aa, dot, bright/14.2, 1); 
          小括号内前2个变量不要修改，第三个变量是亮度，第四个是显示开/关
     */
-    byte dot[2] = {1, 1}; //小数位数
-    float aa[2] = {spd / 10.0, Current/10.0}; //要显示的数
-    HUD.Refresh(aa, dot, bright / 14.2, 1);
+    byte dot[2] = {1, 0}; //小数位数
+    float aa[2] = {spd / 10.0, Current/10.0+(HUDbright+1)*1000}; //要显示的数
+    HUD.Refresh(aa, dot, HUDbright, 1);
     //------------------------------------------------------------------//
     brightruntime = runtime;
   }
