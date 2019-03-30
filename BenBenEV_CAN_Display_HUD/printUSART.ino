@@ -165,7 +165,7 @@ void printUSART()
     LABL(48, 29, 65, 114, str, color, 2);
     Current = 0; //显示完电流就清零，debug用
     ex++;
-
+    //----------功率------------
     if (power != powert) {
       dtostrf(abs(power) / 10.0, 2, 1, str);
       LABL(48, 29, 114, 114, str, color, 2);
@@ -184,7 +184,7 @@ void printUSART()
       }
       ex += 4; powert = power;                          //ex max = 7
     }
-
+    //----------------空调状态-------------
     if ((flag & 0x80) == 0x80)
     {
       dtostrf(HVACstat, 2, 0, str);
@@ -194,7 +194,7 @@ void printUSART()
     }
 
 
-
+    //-------------------------电量
     if ((ODO != ODOt) || (SOC != SOCt) || ((flag & 0x20) == 0x20))
     {
       if (SOC == 1000)
@@ -247,6 +247,7 @@ void printUSART()
     {
 
     }
+    //------------------电压---------------------
     if (Voltage != Voltaget) {
       dtostrf(Voltage / 10.0, 3, 1, str);
       LABL(48, 141, 64, 244, str, 15, 2);
@@ -269,7 +270,7 @@ void printUSART()
       ex += 7; Voltaget = Voltage;              //ex max = 20
     }
     execute();
-
+    //---------------电池温度
     if (fBatTemp == 1)
     {
       dtostrf(MaxBatProbTemp, 2, 0, str);
@@ -300,6 +301,7 @@ void printUSART()
       ex += 1;
       flag -= 0x08;
     }
+    //---------------------牵引力----------------
     if ((flag & 0x10) == 0x10)
     {
       if (TractionForce >= 0)
@@ -319,6 +321,7 @@ void printUSART()
       //dispatch();
     }
     execute();
+    //----------------------------充电机-----------------------
     if ((flag & 0x40) == 0x40)
     {
       dtostrf(dcdcCurrent / 10.0, 2, 1, str);
@@ -328,6 +331,7 @@ void printUSART()
       flag -= 0x40;
       ex += 2;
     }
+    //--------------------------能耗-----------------------
     if (consume != consumet) {
       if (consume == -1) strcpy(str, "--.-");
       else if (consume >= 1000) strcpy(str, "99.9");
@@ -361,6 +365,7 @@ void printUSART()
       ex++;                                   //ex max = 20
     }
     execute();
+    //-------------------------效率---------------------
     dtostrf(Efficiency / 100.0, 2, 1, str);
     //    if (Efficiency  < 1000)
     //    {
@@ -374,7 +379,7 @@ void printUSART()
     //    }
     LABL(32, 219, 5, 277, str, 15, 2);
     ex++;
-
+    //---------------------------温度---------------------
     for (j = 3; j <= 7; j++)
     {
       if (Temp[j] != Tempt[j])  //j=0-7:3=逆变器，4=蒸发器，5=制热液，6=冷却液，7=回风口
