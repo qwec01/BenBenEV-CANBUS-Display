@@ -7,7 +7,7 @@
 #include <EEPROM.h>
 #include <SPI.h>
 #include <ACAN2515.h>
-#include <TM1638Mirror.h>
+#include <TM1638.h>
 #define SEC_CS 8
 #define PRI_CS 9
 #define SEC_INT 2  //副CAN线，仪表板通信，包含HVAC温度etc
@@ -22,6 +22,17 @@
 //-----------------------------------------------------//
 #define KM      180   //满电续航，km， 根据车型修改
 #define ENERGY  23.2  //标称电量，kWh，根据车型修改
+#define VMax    360   //充满电时的最高电压，根据车型修改
+#define VMin    280   //快没电时的最低电压，根据车型修改
+
+//---------------数据表格-------------------
+//  车型    KM    ENERGY    VMax    VMin
+//  180     180   23.2      360     280
+//  210
+//  260
+//  301
+//  316
+//  CS15
 //----------------------------------------------------//
 
 
@@ -33,14 +44,14 @@ float energy;
 int power, powert = -1, spd = 0, spdt, consume, consumet, Current;
 unsigned int SOC, SOCt, SOC100, SOC_BMS, SOCt_BMS, SOC100_BMS, consumeavg, Efficiency, count185t;
 unsigned int meter_per_SOC, meter_per_SOC_BMS, used_SOC, used_SOC_BMS;
-byte charging = 0, hour, minute, hourt, minutet,  i, ex, spgnow, spg, bn, color = 15;
+byte charging = 0,SlowChg, FastChg,HUDdot=0, hour, minute, hourt, minutet,  i, ex, spgnow, spg, bn, color = 15;
 byte MaxVoltNum, MinVoltNum,  MaxBatProbTempNum, MinBatProbTempNum, HVACstat;
 byte  km0, BVoltagebuf[22][8],  odo[3], eepromWrote;
 byte fBatTemp = 0, fBatNum = 0, fspd = 0, flag = 0, dispatched = 0;
 char Temp[8], Tempt[8], BTemp[12];
 unsigned int Voltagebox, powerbox, TractionForceBox, refreshinterval = 333, BVoltage[90], Ri,  MaxVolt, MinVolt;
 unsigned int kmremaining, kmall, BMSkmremaining, BMSkmall;
-unsigned int dcdcCurrent,ChgVin, ChgIin, ChgPin;
+unsigned int dcdcCurrent, ChgVin, ChgIin, ChgPin;
 int motorspd = 0, Voltage, Voltaget, Voltagei, MotorTorque, brightorg;
 byte bright, HUDbright;
 unsigned long runtime, lastruntime, refresh, brightruntime, ODO, ODOt, ODObegin, ODO100, t, count185 = 0, ODObeginForKmallCalc;
@@ -194,13 +205,16 @@ void loop()
          注意本程序中有部分数值是以10倍存储的，显示正常值必须除以10.0。（“.0绝对不能省略”）
          如果不想显示第2个数，设置第2个数为-2000，且小数位数为0
          任何数值小于-1999都将不显示，或显示错误（忽略小数点）
-         第三行 HUD.Refresh(aa, dot, bright/14.2, 1); 
+         第三行 HUD.Refresh(aa, dot, bright/14.2, 1);
          小括号内前2个变量不要修改，第三个变量是亮度，第四个是显示开/关
     */
-    byte dot[2] = {1, 0}; //小数位数
-    float aa[2] = {spd / 10.0, Current/10.0+(HUDbright+1)*1000}; //要显示的数
-    HUD.Refresh(aa, dot, HUDbright, 1);
+    byte dot[2] = {1, 1}; //小数位数
+    float aa[2] = {spd / 10.0, Current / 10.0}; //要显示的数
+    if (charging ==0)
+      HUD.Refresh(aa, dot, HUDbright, 1, 1);
     //------------------------------------------------------------------//
+
+
     brightruntime = runtime;
   }
   if (Serial.available() > 0)//---------------------------------按钮
@@ -252,6 +266,11 @@ void loop()
   }
   if (runtime - lastruntime > refreshinterval)
   {
+    if (charging ==1)
+    {
+      HUD.ShowTime(hour*60+minute,HUDbright,HUDdot);
+      HUDdot=!HUDdot;
+    }
     printUSART();
     lastruntime = runtime;
   }

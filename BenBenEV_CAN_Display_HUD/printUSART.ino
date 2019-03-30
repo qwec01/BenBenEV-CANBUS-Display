@@ -89,7 +89,7 @@ void printUSART()
   //电压条算法：(BOX的y2-1)-((电压-最小电压)/(最大电压-最小电压))*(条高度-2)
   TractionForce = MotorTorque * 2.683732; //牵引力 = 转矩 / 10 * 齿轮比 / 车轮半径
   //170Nm时，轮上转矩1348.17，牵引力4562.34，轮径591mm
-  Voltagebox = 312 - ((Voltage - 2800) / 900.0) * 201;
+  Voltagebox = 312 - ((Voltage - VMin) / VMax-VMin) * 201;
   powerbox = 312 - (abs(power) / 700.0) * 201;
   TractionForceBox = 312 - (abs(TractionForce) / 4600.0) * 201;
   if (motorspd > -3000)
@@ -108,7 +108,21 @@ void printUSART()
     Efficiency = ((Voltage / 10.0) * abs(Current / 10.0)) / ChgPin * 1000.0;
     if (Efficiency >= 999)  Efficiency = 999;
   }
-
+  if (charging == 1);
+  {
+    if (FastChg == 1)
+    {
+      float timeremaining;
+      timeremaining = (1.0 - (SOC_BMS / 1000.0)) * ENERGY / abs(power / 10.0);
+      hour = (int)timeremaining;
+      minute = (timeremaining - (float)hour) * 60;
+    }
+    else
+    {
+      hour = minute / 60;
+      minute = minute % 60;
+    }
+  }
   if (ODO != ODObegin)  //算平均电耗
   {
     consumeavg = (energy / 1000.0) / ((ODO - ODObegin) / 10.0) * 10000.0; //10倍
@@ -130,12 +144,16 @@ void printUSART()
   //---电流----//
   if (spg == 2 || spg == 3)
   {
-    Serial.print(F("DS24(0,0,'AnalogRead:"));
-    Serial.print(brightorg);
-    Serial.print("   ',15);");
-    Serial.print(F("DS24(0,24,'Brightness:"));
-    Serial.print(bright);
-    Serial.print("   ',15);");
+    //-------------------------------------屏显亮度信息------------------------//
+    //    Serial.print(F("DS24(0,0,'AnalogRead:"));                           //
+    //    Serial.print(brightorg);                                            //
+    //    Serial.print("   ',15);");                                          //
+    //    Serial.print(F("DS24(0,24,'Brightness:"));                          //
+    //    Serial.print(bright);                                               //
+    //    comma(',');                                                         //
+    //    Serial.print(HUDbright);                                            //
+    //    Serial.print("   ',15);");                                          //
+    //------------------------------------------------------------------------//
     color = 15;
     if (abs(Current) >= 1000)
       dtostrf(abs(Current) / 10.0, 3, 0, str);

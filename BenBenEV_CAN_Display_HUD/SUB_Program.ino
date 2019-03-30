@@ -130,8 +130,9 @@ static void RCV3 (const CANMessage & inMessage)   //ID=2A2, 523，325
   //  }
   if (inMessage.id == 0x325)
   {
-    hour = ((inMessage.data[2] << 8) + inMessage.data[3]) / 3600;
-    minute = (((inMessage.data[2] << 8) + inMessage.data[3]) - hour * 3600) / 60;
+    minute = ((inMessage.data[2] << 2) + (inMessage.data[3] >> 6));
+    //    hour = minute / 60;
+    //    minute = minute % 60;
   }
   if (inMessage.id == 0x685)    //电池温度9-12
   {
@@ -168,11 +169,18 @@ static void RCV5 (const CANMessage & inMessage)   //ID=191, 380
     for (i = 0; i <= 2; i++)
       odo[i] = inMessage.data[i + 4];
   }
-  if (HVACstat != inMessage.data[0])
+  if (inMessage.id == 0x191)
   {
-    HVACstat = inMessage.data[0];
-    if ((flag & 0x80) == 0)
-      flag += 0x80;
+    if (HVACstat != inMessage.data[0])
+    {
+      HVACstat = inMessage.data[0];
+      if ((flag & 0x80) == 0)
+        flag += 0x80;
+    }
+    SlowChg = (inMessage.data[3] & 0x80) / 0x80;
+    FastChg = (inMessage.data[3] & 0x08) / 0x08;
+//    Serial.println(SlowChg);
+//    Serial.println(FastChg);
   }
 
 }
@@ -260,10 +268,10 @@ byte brightFilter()
   bright = brightorg / 8.83;
   if (bright < 3) bright = 3;
   if (bright > 100) bright = 100;
-  if (bright >= 35)
+  if (bright >= 70)
     HUDbright = 7;
   else
-    HUDbright = bright / 5.0;
+    HUDbright = bright / 10.0;
   return bright;
 }
 //------------------------刷新串口屏，以防超过屏的处理能力
