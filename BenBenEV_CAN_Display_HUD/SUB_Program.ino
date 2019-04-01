@@ -37,7 +37,7 @@ static void RCV0 (const CANMessage & inMessage) {   //ID=307和327、615和625
   }
   if (inMessage.id == 0x685)    //电池温度9-12
   {
-    for (i = 0; i <= 3; i++)
+    for (i = 0; i <= 7; i++)
       BTemp[i + 8] = inMessage.data[i] - 40;
   }
 }
@@ -130,7 +130,7 @@ static void RCV3 (const CANMessage & inMessage)   //ID=2A2, 523，325
   //  }
   if (inMessage.id == 0x325)
   {
-    minute = ((inMessage.data[2] << 2) + (inMessage.data[3] >> 6));
+    ChgMinute = ((inMessage.data[2] << 2) + (inMessage.data[3] >> 6));
     //    hour = minute / 60;
     //    minute = minute % 60;
   }

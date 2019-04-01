@@ -12,7 +12,7 @@
 #define PRI_CS 9
 #define SEC_INT 2  //副CAN线，仪表板通信，包含HVAC温度etc
 #define PRI_INT 3  //主CAN线，包括单体电压、电池温度、电机控制etc
-#define debug 0     //不接串口屏时设为1，否则为0
+#define debug 0    //不接串口屏时设为1，否则为0
 #define mirror 1    //HUD是否镜像显示
 #define DIO 4
 #define CLK 6
@@ -43,12 +43,12 @@ char MaxBatProbTemp, MinBatProbTemp;
 float energy;
 int power, powert = -1, spd = 0, spdt, consume, consumet, Current;
 unsigned int SOC, SOCt, SOC100, SOC_BMS, SOCt_BMS, SOC100_BMS, consumeavg, Efficiency, count185t;
-unsigned int meter_per_SOC, meter_per_SOC_BMS, used_SOC, used_SOC_BMS;
-byte charging = 0,SlowChg, FastChg,HUDdot=0, hour, minute, hourt, minutet,  i, ex, spgnow, spg, bn, color = 15;
+unsigned int meter_per_SOC, meter_per_SOC_BMS, used_SOC, used_SOC_BMS, ChgMinute;
+byte charging = 0,SlowChg, FastChg,HUDdot=0, hour, hourt,minute, minutet,  i, ex, spgnow, spg, bn, color = 15;
 byte MaxVoltNum, MinVoltNum,  MaxBatProbTempNum, MinBatProbTempNum, HVACstat;
 byte  km0, BVoltagebuf[22][8],  odo[3], eepromWrote;
 byte fBatTemp = 0, fBatNum = 0, fspd = 0, flag = 0, dispatched = 0;
-char Temp[8], Tempt[8], BTemp[12];
+char Temp[8], Tempt[8], BTemp[16];
 unsigned int Voltagebox, powerbox, TractionForceBox, refreshinterval = 333, BVoltage[90], Ri,  MaxVolt, MinVolt;
 unsigned int kmremaining, kmall, BMSkmremaining, BMSkmall;
 unsigned int dcdcCurrent, ChgVin, ChgIin, ChgPin;
@@ -70,6 +70,7 @@ void setup() {
   Serial.begin(115200);
   while (!Serial);
   Serial.setTimeout(20);
+  Serial.println(VMax-VMin);
   SPI.begin();
   delay(100);
   //------------------------------------------------↓初始化SEC CAN线-----------------------

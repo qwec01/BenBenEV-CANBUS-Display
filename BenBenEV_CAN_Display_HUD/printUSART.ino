@@ -89,7 +89,7 @@ void printUSART()
   //电压条算法：(BOX的y2-1)-((电压-最小电压)/(最大电压-最小电压))*(条高度-2)
   TractionForce = MotorTorque * 2.683732; //牵引力 = 转矩 / 10 * 齿轮比 / 车轮半径
   //170Nm时，轮上转矩1348.17，牵引力4562.34，轮径591mm
-  Voltagebox = 312 - ((Voltage - VMin) / VMax-VMin) * 201;
+  Voltagebox = 312 - ((Voltage/10.0 - VMin) / (VMax-VMin)) * 201;
   powerbox = 312 - (abs(power) / 700.0) * 201;
   TractionForceBox = 312 - (abs(TractionForce) / 4600.0) * 201;
   if (motorspd > -3000)
@@ -119,8 +119,8 @@ void printUSART()
     }
     else
     {
-      hour = minute / 60;
-      minute = minute % 60;
+      hour = ChgMinute / 60.0;
+      minute = ChgMinute % 60;
     }
   }
   if (ODO != ODObegin)  //算平均电耗
@@ -516,17 +516,15 @@ void printUSART()
         }
       }
     }
-    Serial.println(); delay(75);
-    //    byte maxpos = 0, minpos = 0;
-    //    for (j = 0; j <= 85; j++)
-    //    {
-    //      if (BVoltage[maxpos] < BVoltage[j]) maxpos = j;
-    //      if (BVoltage[minpos] > BVoltage[j]) minpos = j;
-    //    }
-    Serial.print(F("DS24(0,295,'T:  "));
-    //    Serial.print("T:  ");
+    Serial.println();
+#if !debug
+          while (!Serial.find("OK"));
+#else
+          delay(75);
+#endif
+    Serial.print(F("DS16(0,295,'T: "));
     j = 0;
-    for (j = 0; j <= 11; j++)
+    for (j = 0; j <= 15; j++)
     {
       Serial.print(BTemp[j], DEC);
       comma(' ');
@@ -535,11 +533,7 @@ void printUSART()
 
     CELS(MaxVoltNum % 10, MaxVoltNum / 10, MaxVolt, 1);
     CELS(MinVoltNum % 10, MinVoltNum / 10, MinVolt, 3);
-    //    Serial.print("CELS(24,"); Serial.print(maxpos % 10); Serial.print(','); Serial.print(maxpos / 10); Serial.print(",'");
-    //    Serial.print(BVoltage[maxpos]); Serial.print("',15,1,1);");
-    //    Serial.print("CELS(24,"); Serial.print(minpos % 10); Serial.print(','); Serial.print(minpos / 10); Serial.print(",'");
-    //    Serial.print(BVoltage[minpos]); Serial.print("',15,3,1);");
-    Serial.println(); delay(100);
+//    Serial.println(); delay(100);
     //ex = 1;
   }
   //------------------------------------↑BMS页面----------
