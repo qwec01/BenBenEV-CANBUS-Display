@@ -55,11 +55,12 @@ static void RCV1 (const CANMessage & inMessage)   //ID=231、675、685
         flag += 0x40;
     }
   }
-  if (inMessage.id >= 0x640 && inMessage.id <= 0x656) //所有单体电压
+  if (inMessage.id >= 0x641 && inMessage.id <= 0x658) //所有单体电压
   {
     byte pos;
     pos = (inMessage.id - 0x641);
     memcpy(BVoltagebuf[pos], inMessage.data, 8);
+//    Serial.println(BVoltagebuf[pos][0]);
   }
   if (inMessage.id == 0x675)    //电池温度1-8，单体电压界面
   {
@@ -124,19 +125,16 @@ static void RCV3 (const CANMessage & inMessage)   //ID=2A2, 523，325
     for (i = 0; i <= 3; i++)
       Temp[i] = inMessage.data[i + 3] - 50;
   }
-  //  if (inMessage.id == 0x523)  //续航
-  //  {
-  //
-  //  }
+
   if (inMessage.id == 0x325)
   {
     ChgMinute = ((inMessage.data[2] << 2) + (inMessage.data[3] >> 6));
     //    hour = minute / 60;
     //    minute = minute % 60;
   }
-  if (inMessage.id == 0x685)    //电池温度9-12
+  if (inMessage.id == 0x685)    //电池温度9-12,BMS页面
   {
-    for (byte i = 0; i <= 3; i++)
+    for (byte i = 0; i <= 7; i++)
       BTemp[i + 8] = inMessage.data[i] - 40;
   }
 }
@@ -179,8 +177,6 @@ static void RCV5 (const CANMessage & inMessage)   //ID=191, 380
     }
     SlowChg = (inMessage.data[3] & 0x80) / 0x80;
     FastChg = (inMessage.data[3] & 0x08) / 0x08;
-//    Serial.println(SlowChg);
-//    Serial.println(FastChg);
   }
 
 }
@@ -241,10 +237,11 @@ void BOXF(int x1, int y1, int x2, int y2, byte c)
   dispatch();
 
 }
-
-void CELS(byte l, byte h, unsigned int x, byte color)
+//此处color是背景色
+void CELS(byte m, byte l, byte h, int x, byte color)
 {
-  Serial.print("CELS(24,");
+  Serial.print("CELS(");
+  Serial.print(m);comma(',');
   dispatch();
   Serial.print(l); comma(',');
   Serial.print(h); Serial.print(",'");

@@ -46,10 +46,10 @@ unsigned int SOC, SOCt, SOC100, SOC_BMS, SOCt_BMS, SOC100_BMS, consumeavg, Effic
 unsigned int meter_per_SOC, meter_per_SOC_BMS, used_SOC, used_SOC_BMS, ChgMinute;
 byte charging = 0,SlowChg, FastChg,HUDdot=0, hour, hourt,minute, minutet,  i, ex, spgnow, spg, bn, color = 15;
 byte MaxVoltNum, MinVoltNum,  MaxBatProbTempNum, MinBatProbTempNum, HVACstat;
-byte  km0, BVoltagebuf[22][8],  odo[3], eepromWrote;
+byte  km0, BVoltagebuf[24][8],  odo[3], eepromWrote;
 byte fBatTemp = 0, fBatNum = 0, fspd = 0, flag = 0, dispatched = 0;
 char Temp[8], Tempt[8], BTemp[16];
-unsigned int Voltagebox, powerbox, TractionForceBox, refreshinterval = 333, BVoltage[90], Ri,  MaxVolt, MinVolt;
+unsigned int Voltagebox, powerbox, TractionForceBox, refreshinterval = 333, BVoltage[100], Ri,  MaxVolt, MinVolt;
 unsigned int kmremaining, kmall, BMSkmremaining, BMSkmall;
 unsigned int dcdcCurrent, ChgVin, ChgIin, ChgPin;
 int motorspd = 0, Voltage, Voltaget, Voltagei, MotorTorque, brightorg;
@@ -70,7 +70,6 @@ void setup() {
   Serial.begin(115200);
   while (!Serial);
   Serial.setTimeout(20);
-  Serial.println(VMax-VMin);
   SPI.begin();
   delay(100);
   //------------------------------------------------↓初始化SEC CAN线-----------------------

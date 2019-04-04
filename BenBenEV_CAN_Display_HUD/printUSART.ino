@@ -6,8 +6,9 @@ void printUSART()
   byte j = 0, h = 0, l = 0;
   if (spg == 2 || spg == 3)
   {
-    if (debug == 1) km0 = 129;
-    if (km0 >= 128 && Current <= -10)
+    //if (debug == 1) km0 = 129;
+//    if (km0 >= 128 && Current <= -10)
+    if (SlowChg == 1)
     {
       charging = 1;
       spg = 3;
@@ -184,14 +185,7 @@ void printUSART()
       }
       ex += 4; powert = power;                          //ex max = 7
     }
-    //----------------空调状态-------------
-    if ((flag & 0x80) == 0x80)
-    {
-      dtostrf(HVACstat, 2, 0, str);
-      LABL ( 32, 285, 48, 328, str, 15, 1);
-      flag -= 0x80;
-      ex += 1;
-    }
+
 
 
     //-------------------------电量
@@ -294,6 +288,14 @@ void printUSART()
 
   if (spg == 2) //-----------------------------------------------仅行驶时显示
   {
+//----------------空调状态-------------
+    if ((flag & 0x80) == 0x80)
+    {
+      dtostrf(HVACstat, 2, 0, str);
+      LABL ( 32, 285, 48, 328, str, 15, 1);
+      flag -= 0x80;
+      ex += 1;
+    }
     if ((flag & 0x08) == 0x08)
     {
       itoa(Ri, str, 10);  //内阻
@@ -309,7 +311,6 @@ void printUSART()
       else
         dtostrf(TractionForce, 5, 0, str);
       LABL(32, 19, 174, 100, str, 15, 2);
-      //LABL(24, 47, 191, 107, str, 15, 2);
 
       if (TractionForce >= 3000) color = 1;
       else if (TractionForce >= 0) color = 3;
@@ -367,16 +368,6 @@ void printUSART()
     execute();
     //-------------------------效率---------------------
     dtostrf(Efficiency / 100.0, 2, 1, str);
-    //    if (Efficiency  < 1000)
-    //    {
-    //      str[4] = '%';
-    //      str[5] = '\0';
-    //    }
-    //    else
-    //    {
-    //      str[5] = '%';
-    //      str[6] = '\0';
-    //    }
     LABL(32, 219, 5, 277, str, 15, 2);
     ex++;
     //---------------------------温度---------------------
@@ -451,18 +442,11 @@ void printUSART()
     LABL(32, 219, 5, 277, str, 15, 2);
     execute();
     //电池温度
-    Serial.print(F("DS16(26,179,'")); //字符串保存到PROGMEM
-    dispatch();
-    //Serial.print("T:  ");
-    for (j = 0; j <= 11; j++)
+    
+    for (j = 0; j <= 15; j++)
     {
-      if ((BTemp[j] > -10) && (BTemp[j] < 10)) comma(' ');
-      if (BTemp[j] >= 0) comma(' ');
-      Serial.print(BTemp[j], DEC);
-      if (j != 11)      comma(' ');
+      CELS(16,0,j,BTemp[j],0);
     }
-
-    Serial.print(F("',5,0);"));
     ex += 1;
     execute();
     h = 0;
@@ -486,23 +470,23 @@ void printUSART()
     //CELS(m,h,l,'显示内容',c,bc,ali);用m点阵字体在h行l列的单元格中,用c号颜色字,bc号颜色背景,显示相应内容
     //,ali：显示方案 0-居左  1-居中  2-居右
     byte k;
-    for (k = 0; k <= 21; k++)
+    for (k = 0; k <= 23; k++)
     {
       for (i = 0; i <= 7; i = i + 2)
       {
-        BVoltage[j] = BVoltagebuf[k][i] * 256 + BVoltagebuf[k][i + 1];
+        BVoltage[j] = BVoltagebuf[k][i] * 256.0 + BVoltagebuf[k][i + 1];
+        if (BVoltage[j] > 5000)
+          BVoltage[j]=0;
         j++;
       }
     }
     j = 0;
-    for (h = 0; h <= 8; h++)
+    for (h = 0; h <= 9; h++)
     {
       for (l = 0; l <= 9; l++)
       {
-        if (j == 86) break;
-        CELS(l, h, BVoltage[j], 0);
-        //        Serial.print("CELS(24,"); Serial.print(l); comma(','); Serial.print(h); Serial.print(",'");
-        //        Serial.print(BVoltage[j]); Serial.print("',15,0,1);");
+//        if (j == 100) break;
+        CELS(24,l, h, BVoltage[j], 0);
         j++;
         if (j == 25 || j == 50 || j == 75)
         {
@@ -512,7 +496,6 @@ void printUSART()
 #else
           delay(75);
 #endif
-          delay(10);
         }
       }
     }
@@ -526,13 +509,14 @@ void printUSART()
     j = 0;
     for (j = 0; j <= 15; j++)
     {
+      if (BTemp[j]==-40) break;
       Serial.print(BTemp[j], DEC);
       comma(' ');
     }
-    Serial.print("     ',15,0);");
+    Serial.print("  ',15,0);");
 
-    CELS(MaxVoltNum % 10, MaxVoltNum / 10, MaxVolt, 1);
-    CELS(MinVoltNum % 10, MinVoltNum / 10, MinVolt, 3);
+    CELS(24,MaxVoltNum % 10, MaxVoltNum / 10, MaxVolt, 1);
+    CELS(24,MinVoltNum % 10, MinVoltNum / 10, MinVolt, 3);
 //    Serial.println(); delay(100);
     //ex = 1;
   }
