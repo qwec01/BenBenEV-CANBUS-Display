@@ -1,4 +1,7 @@
 # BenBenEV-CANBUS-Display
+<a href="https://996.icu"><img src="https://img.shields.io/badge/link-996.icu-red.svg" alt="996.icu"></a>  
+[![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)  
+
 长安奔奔EV-CAN总线显示屏+车速HUD，17款奔奔EV180测试通过  
 
 野生程序猿，程序能跑但不好看，欢迎正规程序猿修改  
