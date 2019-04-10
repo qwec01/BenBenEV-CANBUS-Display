@@ -144,9 +144,10 @@ void setup() {
   delay(500);
 #endif
   //--------------------------------------------显示EEPROM值
-  Serial.print(F("DS24(0,180,'Used SOC_BMS: ")); Serial.print(used_SOC_BMS); Serial.print("',15,0);");
-  Serial.print(F("DS24(0,210,'Used SOC:     ")); Serial.print(used_SOC); Serial.print("',15,0);");
-  Serial.print(F("DS24(0,240,'energy:       ")); Serial.print(energy); Serial.println("',15,0);");
+  Serial.print(F("DS24(0,180,'Used SOC_BMS: ")); Serial.print(used_SOC_BMS/10.0); Serial.print("%',15,0);");
+  Serial.print(F("DS24(0,210,'Used SOC:     ")); Serial.print(used_SOC/10.0); Serial.print("%',15,0);");
+  Serial.print(F("DS24(0,240,'energy:       ")); Serial.print(energy/1000.0); Serial.println("kWh',15,0);");
+  Serial.print(F("DS24(0,270,'ODO begin:    ")); Serial.print(ODObeginForKmallCalc/10.0); Serial.println("km',15,0);");
   HUD.rst();//上电初始化
   for (byte i = 0; i <= 1; i++)//全显测试
   {
