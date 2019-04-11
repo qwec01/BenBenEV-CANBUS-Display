@@ -47,7 +47,7 @@ void changeFilt()
       {standard2515Filter (0x615 , 0, 0), RCV0},//温度电压最值,含675
       {standard2515Filter (0x640 , 0, 0), RCV1},//单体电压
       {standard2515Filter (0x675 , 0, 0), RCV2},//前8个温度
-      {standard2515Filter (0x685 , 0, 0), RCV3},//后4个温度
+      {standard2515Filter (0x685 , 0, 0), RCV3},//后8个温度
       {standard2515Filter (0x7FF , 0, 0), RCV4},//市电电压
       {standard2515Filter (0x7FF , 0, 0), RCV5}
     };

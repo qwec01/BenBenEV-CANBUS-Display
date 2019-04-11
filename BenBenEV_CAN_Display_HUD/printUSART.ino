@@ -486,7 +486,7 @@ void printUSART()
       for (l = 0; l <= 9; l++)
       {
 //        if (j == 100) break;
-        CELS(24,l, h, BVoltage[j], 0);
+        CELS(16,l, h, BVoltage[j], 0);
         j++;
         if (j == 25 || j == 50 || j == 75)
         {
