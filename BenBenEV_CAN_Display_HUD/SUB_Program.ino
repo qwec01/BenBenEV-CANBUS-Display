@@ -132,7 +132,7 @@ static void RCV3 (const CANMessage & inMessage)   //ID=2A2, 523，325
     //    hour = minute / 60;
     //    minute = minute % 60;
   }
-  if (inMessage.id == 0x685)    //电池温度9-12,BMS页面
+  if (inMessage.id == 0x685)    //电池温度9-16,BMS页面
   {
     for (byte i = 0; i <= 7; i++)
       BTemp[i + 8] = inMessage.data[i] - 40;
