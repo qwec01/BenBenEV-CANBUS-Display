@@ -214,8 +214,8 @@ void loop()
     if (charging ==0)
       HUD.Refresh(aa, dot, HUDbright, 1, 1);
     //------------------------------------------------------------------//
-
-
+    //外部电流表输出
+    Ameter();
     brightruntime = runtime;
   }
   if (Serial.available() > 0)//---------------------------------按钮

@@ -60,7 +60,7 @@ static void RCV1 (const CANMessage & inMessage)   //ID=231、675、685
     byte pos;
     pos = (inMessage.id - 0x641);
     memcpy(BVoltagebuf[pos], inMessage.data, 8);
-//    Serial.println(BVoltagebuf[pos][0]);
+    //    Serial.println(BVoltagebuf[pos][0]);
   }
   if (inMessage.id == 0x675)    //电池温度1-8，单体电压界面
   {
@@ -241,7 +241,7 @@ void BOXF(int x1, int y1, int x2, int y2, byte c)
 void CELS(byte m, byte l, byte h, int x, byte color)
 {
   Serial.print("CELS(");
-  Serial.print(m);comma(',');
+  Serial.print(m); comma(',');
   dispatch();
   Serial.print(l); comma(',');
   Serial.print(h); Serial.print(",'");
@@ -316,6 +316,29 @@ void setZero()
   {
     BTemp[i] = 0;
   }
+}
+
+void Ameter()
+{
+  //  refresh=micros();
+  //  Serial.print("Ameter:");
+  //  Current = (Current0 * 256 + Current1) / 10.0 - 600;
+  char CurrentV;
+  if (Current >= 2000)
+    analogWrite(5, 255);
+  if (Current <= -1500)
+    analogWrite(5, 0);
+  if (Current >= 0 && Current < 2000)
+  {
+    CurrentV = Current / 10.0 * 0.77 + 102;
+    analogWrite(5, CurrentV);
+  }
+  if (Current < 0 && Current > -1500)
+  {
+    CurrentV = Current / 10.0 * 0.68 + 102;
+    analogWrite(5, CurrentV);
+  }
+  //    Serial.println(micros()-refresh);
 }
 //----------------------------------------------------------------------------------------//
 //                                      ↑自定义子程序↑                                     //
